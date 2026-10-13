@@ -1,0 +1,60 @@
+import FreeCAD
+import FreeCADGui as Gui
+from pathlib import Path
+import subprocess
+
+slicer_command = "orca-slicer"
+
+def log_and_notify(message, is_error=False):
+    """
+    Prints to the console and pushes a transient notification 
+    to the FreeCAD Status Bar.
+    """
+    # 1. Print a permanent log to the console
+    prefix = "ERROR" if is_error else "INFO"
+    print(f"[{prefix}] {message}")
+    
+    # 2. Push a temporary message to the FreeCAD Status Bar (shows for 5000 milliseconds)
+    main_window = Gui.getMainWindow()
+    if main_window and main_window.statusBar():
+        main_window.statusBar().showMessage(message, 5000)
+
+def export_batch(selection_list):
+    doc_name = FreeCAD.ActiveDocument.Label
+    out_dir = Path("/tmp/freecad-export")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
+    export_tolerance = 0.01 
+    
+    exported_files = []
+    
+    for obj in selection_list:
+        if hasattr(obj, 'Shape'): 
+            body_name = obj.Label.replace(" ", "_")
+            file_name = f"{doc_name}_{body_name}.stl"
+            out_file = out_dir / file_name
+            
+            print(f"Exporting {obj.Label} at {export_tolerance} tolerance...")
+            obj.Shape.exportStl(str(out_file), export_tolerance) 
+            
+            exported_files.append(str(out_file))
+        else:
+            print(f"Skipping {obj.Label} - Not a valid solid/shape")
+            
+    if exported_files:
+        # Notify the user quietly at the bottom of the screen
+        log_and_notify(f"Successfully exported {len(exported_files)} part(s) to {out_dir}")
+        
+        # Launch slicer
+        print(f"Opening files in {slicer_command}...")
+        subprocess.Popen([slicer_command] + exported_files)
+    else:
+        log_and_notify("Export Failed: No valid 3D shapes in selection.", is_error=True)
+    
+if __name__ == "__main__":
+    selection = Gui.Selection.getSelection()
+    
+    if not selection:
+        log_and_notify("Selection Error: Please select at least one body in the tree view!", is_error=True)
+    else:
+        export_batch(selection)
