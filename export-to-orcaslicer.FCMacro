@@ -60,4 +60,4 @@ if __name__ == "__main__":
     if not selection:
         log_and_notify("Selection Error: Please select at least one body in the tree view!", is_error=True)
     else:
-        export_batch(selection, temporary_files=false)
+        export_batch(selection, temporary_files=False)
