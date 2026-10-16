@@ -19,10 +19,13 @@ def log_and_notify(message, is_error=False):
     if main_window and main_window.statusBar():
         main_window.statusBar().showMessage(message, 5000)
 
-def export_batch(selection_list):
+def export_batch(selection_list, temporary_files: bool):
     doc_name = FreeCAD.ActiveDocument.Label
-    out_dir = Path("/tmp/freecad-export")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    if temporary_files:
+      out_dir = Path("/tmp/freecad-export")
+      out_dir.mkdir(parents=True, exist_ok=True)
+    else:
+      out_dir = Path(FreeCAD.ActiveDocument.FileName).parent
     
     export_tolerance = 0.01 
     
@@ -35,7 +38,7 @@ def export_batch(selection_list):
             out_file = out_dir / file_name
             
             print(f"Exporting {obj.Label} at {export_tolerance} tolerance...")
-            obj.Shape.exportStl(str(out_file), export_tolerance) 
+            obj.Shape.exportStl(str(out_file), export_tolerance)
             
             exported_files.append(str(out_file))
         else:
@@ -47,7 +50,7 @@ def export_batch(selection_list):
         
         # Launch slicer
         print(f"Opening files in {slicer_command}...")
-        subprocess.Popen([slicer_command] + exported_files)
+        subprocess.Popen([slicer_command] + exported_files, cwd=out_dir)
     else:
         log_and_notify("Export Failed: No valid 3D shapes in selection.", is_error=True)
     
@@ -57,4 +60,4 @@ if __name__ == "__main__":
     if not selection:
         log_and_notify("Selection Error: Please select at least one body in the tree view!", is_error=True)
     else:
-        export_batch(selection)
+        export_batch(selection, temporary_files=false)
